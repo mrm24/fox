@@ -265,6 +265,8 @@ module m_dom_dom
   public :: lookupPrefix
   public :: getTextContent
   public :: setTextContent
+  public :: getTextContent_len
+  public :: internal_getTextContent 
 
   public :: getNodePath
 
@@ -1037,7 +1039,7 @@ endif
 
     select case(np%nodeType)
     case (ATTRIBUTE_NODE)
-      c = getTextContent(np)
+      call internal_getTextContent(np, c)
     case (CDATA_SECTION_NODE, COMMENT_NODE, PROCESSING_INSTRUCTION_NODE, TEXT_NODE)
       c = str_vs(np%nodeValue)
     case default
@@ -4177,7 +4179,7 @@ endif
 
   function getTextContent(arg, ex)result(c) 
     type(DOMException), intent(out), optional :: ex
-    type(Node), pointer :: arg
+    type(Node), intent(inout), pointer :: arg
 #ifdef RESTRICTED_ASSOCIATED_BUG
     character(len=getTextContent_len(arg, .true.)) :: c
 #else
@@ -9219,7 +9221,7 @@ endif
     if (len(c)>0) then
       do i = 1, arg%elExtras%attributes%length
         if (str_vs(arg%elExtras%attributes%nodes(i)%this%nodeName)==name) then
-          c = getTextContent(arg%elExtras%attributes%nodes(i)%this)
+          call internal_getTextContent(arg%elExtras%attributes%nodes(i)%this, c)
           exit
         endif
       enddo
@@ -9619,7 +9621,7 @@ endif
         if ((str_vs(arg%elExtras%attributes%nodes(i)%this%elExtras%localName)==localname &
           .and. str_vs(arg%elExtras%attributes%nodes(i)%this%elExtras%namespaceURI)==namespaceURI) &
           .or. (namespaceURI=="".and.str_vs(arg%elExtras%attributes%nodes(i)%this%nodeName)==localname)) then
-          c = getTextContent(arg%elExtras%attributes%nodes(i)%this)
+          call internal_getTextContent(arg%elExtras%attributes%nodes(i)%this, c)
           exit
         endif
       enddo
@@ -10416,7 +10418,7 @@ endif
 
     endif
 
-    c = getTextContent(arg, ex)
+    call internal_getTextContent(arg, c, ex)
 
   end function getValue_DOM
 
