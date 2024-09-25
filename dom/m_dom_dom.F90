@@ -750,11 +750,11 @@ endif
 
     select case(np%nodeType)
     case (ELEMENT_NODE, ATTRIBUTE_NODE, XPATH_NAMESPACE_NODE)
-      call destroyElementOrAttribute(np, ex)
+      call destroyElementOrAttribute(np,ex)
     case (DOCUMENT_TYPE_NODE)
-      call destroyDocumentType(np, ex)
+      call destroyDocumentType(np,ex)
     case (ENTITY_NODE, NOTATION_NODE)
-      call destroyEntityOrNotation(np, ex)
+      call destroyEntityOrNotation(np,ex)
     case (DOCUMENT_NODE)
       call destroyDocument(np,ex)
     end select
@@ -4065,13 +4065,13 @@ endif
     endif
   end function getTextContent_len
 
-  function getTextContent(arg, ex)result(c) 
+  subroutine internal_getTextContent(arg, c, ex)
     type(DOMException), intent(out), optional :: ex
-    type(Node), pointer :: arg
+    type(Node), intent(inout), pointer :: arg
 #ifdef RESTRICTED_ASSOCIATED_BUG
-    character(len=getTextContent_len(arg, .true.)) :: c
+    character(len=getTextContent_len(arg, .true.)), intent(out) :: c
 #else
-    character(len=getTextContent_len(arg, associated(arg))) :: c
+    character(len=getTextContent_len(arg, associated(arg))), intent(out) :: c
 #endif
 
     type(Node), pointer :: this, treeroot
@@ -4080,7 +4080,7 @@ endif
 
     if (.not.associated(arg)) then
       if (getFoX_checks().or.FoX_NODE_IS_NULL<200) then
-  call throw_exception(FoX_NODE_IS_NULL, "getTextContent", ex)
+  call throw_exception(FoX_NODE_IS_NULL, "internal_getTextContent", ex)
   if (present(ex)) then
     if (inException(ex)) then
        return
@@ -4089,7 +4089,7 @@ endif
 endif
 
     endif
-    
+
     if (len(c) == 0) then
       c = ""
       return
@@ -4172,6 +4172,18 @@ endif
     enddo
 
 
+     nullify(treeroot)
+  end subroutine internal_getTextContent
+
+  function getTextContent(arg, ex)result(c) 
+    type(DOMException), intent(out), optional :: ex
+    type(Node), pointer :: arg
+#ifdef RESTRICTED_ASSOCIATED_BUG
+    character(len=getTextContent_len(arg, .true.)) :: c
+#else
+    character(len=getTextContent_len(arg, associated(arg))) :: c
+#endif
+    call internal_getTextContent(arg, c)
   end function getTextContent
 
   subroutine setTextContent(arg, textContent, ex)
@@ -5847,6 +5859,7 @@ endif
 
 ! Switch off all GC - since this is GC!
     call setGCstate(arg, .false., ex)
+
     if (arg%nodeType/=DOCUMENT_NODE) then
       if (getFoX_checks().or.FoX_INVALID_NODE<200) then
   call throw_exception(FoX_INVALID_NODE, "destroyDocument", ex)
@@ -9717,8 +9730,7 @@ endif
       endif
     endif
 
-! FIXME what if namespace is undeclared? Throw an error *only* if FoX_errors is
-! on, otherwise its taken care of by namespace fixup on serialization
+! FIXME what if namespace is undeclared? Throw an error *only* if FoX_errors is on, otherwise its taken care of by namespace fixup on serialization
 
     quickFix = getGCstate(getOwnerDocument(arg)) &
       .and. arg%inDocument
